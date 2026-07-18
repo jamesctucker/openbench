@@ -1,0 +1,7 @@
+default:
+  model: deepseek/deepseek-v4-flash
+  timeout: 600
+hostname: null
+log_dir: scheduled/.logs
+locks_dir: ~/.openbench/cron/.locks
+install_dir: ~/.openbench/cron

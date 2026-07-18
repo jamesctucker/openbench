@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOLD="\033[1m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+RED="\033[31m"
+RESET="\033[0m"
+
+info()  { echo -e "${BOLD}$*${RESET}"; }
+ok()    { echo -e "${GREEN}✓ $*${RESET}"; }
+warn()  { echo -e "${YELLOW}→ $*${RESET}"; }
+fail()  { echo -e "${RED}✗ $*${RESET}"; }
+
+ask() {
+    local prompt="$1"
+    local default="${2:-n}"
+    local choices="[y/N]"
+    [[ "$default" == "y" ]] && choices="[Y/n]"
+    echo -ne "${BOLD}${prompt} ${choices}${RESET} "
+    read -r answer
+    answer="${answer:-$default}"
+    [[ "$answer" =~ ^[Yy] ]]
+}
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+echo ""
+info "🛠  OpenBench — Setup"
+echo "   ${REPO_ROOT}"
+echo ""
+
+# ── Required checks ──────────────────────────────────────────
+
+if ! command -v git &>/dev/null; then
+    fail "git is required but not found. Install Xcode Command Line Tools first."
+    exit 1
+fi
+ok "git"
+
+if ! command -v bun &>/dev/null; then
+    fail "bun is required but not found. Install it first: https://bun.sh/docs/installation"
+    exit 1
+fi
+ok "bun $(bun --version)"
+
+if ! command -v node &>/dev/null; then
+    warn "node not found. Some third-party tools may still expect Node.js."
+    if ask "Install Node.js via Homebrew?"; then
+        brew install node
+    fi
+else
+    ok "node $(node --version)"
+fi
+
+# ── Workspace dependencies ───────────────────────────────────
+
+if [[ -f package.json ]]; then
+    info "Installing workspace dependencies..."
+    bun install --silent
+    ok "Workspace dependencies installed"
+fi
+
+if [[ -f .opencode/package.json ]]; then
+    info "Installing OpenCode dependencies..."
+    (cd .opencode && bun install --silent)
+    ok "OpenCode dependencies installed"
+fi
+
+# ── MCP server dependencies ──────────────────────────────────
+
+if [[ -f scripts/mcp-servers/package.json ]]; then
+    info "Installing MCP server dependencies..."
+    (cd scripts/mcp-servers && bun install --silent)
+    ok "MCP server dependencies installed"
+fi
+
+if [[ -f scripts/workspace/requirements.txt ]]; then
+    if command -v pip3 &>/dev/null; then
+        info "Installing Python workspace dependencies..."
+        pip3 install -q -r scripts/workspace/requirements.txt
+        ok "Python dependencies installed"
+    else
+        warn "pip3 not found. Workspace scripts may not work."
+    fi
+fi
+
+# ── Optional tools ───────────────────────────────────────────
+
+echo ""
+info "Optional integrations"
+echo ""
+
+# ── remindctl ────────────────────────────────────────────────
+
+if command -v remindctl &>/dev/null; then
+    ok "remindctl already installed ($(remindctl --version 2>/dev/null || echo "unknown version"))"
+else
+    echo -e "${BOLD}remindctl${RESET} — CLI for Apple Reminders (macOS only)"
+    echo " lets agents read and create reminders via remindctl."
+    echo " Requires macOS 14+ (Sonoma) and Reminders permission grant."
+    echo ""
+    if ask "Install remindctl via Homebrew?"; then
+        HOMEBREW_NO_AUTO_UPDATE=1 brew install steipete/tap/remindctl
+        ok "remindctl installed"
+        echo ""
+        warn "First-time setup:"
+        echo "   1. Run: remindctl status"
+        echo "   2. If access is denied, go to System Settings > Privacy & Security > Reminders"
+        echo "   3. Enable Reminders access for your terminal app"
+        echo "   4. Run: remindctl authorize"
+    else
+        warn "remindctl skipped. You can install later with: brew install steipete/tap/remindctl"
+    fi
+fi
+
+echo ""
+# ── headroom ──────────────────────────────────────────────────
+
+if command -v headroom &>/dev/null; then
+    ok "headroom already installed ($(headroom --version 2>/dev/null))"
+else
+    echo -e "${BOLD}headroom${RESET} — context optimization layer for LLMs"
+    echo " Compresses tool outputs, logs, files before they reach the model."
+    echo " Reversible via CCR (Compress-Cache-Retrieve). 60-95% fewer tokens."
+    echo " MCP server integrates with OpenCode — no plugin needed."
+    echo ""
+    echo " ⚠️  HIGH VALUE — compounds every session"
+    echo ""
+    if ask "Install headroom via pip?" "y"; then
+        pip install "headroom-ai[mcp]"
+        headroom mcp install
+        ok "headroom installed and registered with OpenCode"
+    else
+        warn "headroom skipped. Install later with: pip install \"headroom-ai[mcp]\" && headroom mcp install"
+    fi
+fi
+
+echo ""
+# ── Reminders permission check ───────────────────────────────
+
+if command -v remindctl &>/dev/null; then
+    status=$(remindctl status --json 2>/dev/null || echo '{"authorized":false}')
+    if echo "$status" | grep -q '"authorized"[[:space:]]*:[[:space:]]*false'; then
+        warn "Reminders permission not yet granted. Run: remindctl authorize"
+        echo "   Then enable Reminders access in System Settings > Privacy & Security > Reminders"
+    fi
+fi
+
+# ── Git hooks ─────────────────────────────────────────────────
+
+echo ""
+info "Git setup"
+
+if ask "Set this repo's default branch to main?"; then
+    git -C "$REPO_ROOT" config init.defaultBranch main 2>/dev/null || true
+    ok "default branch set to main"
+fi
+
+# ── Done ──────────────────────────────────────────────────────
+
+echo ""
+ok "Setup complete!"
+echo ""
+info "Next steps:"
+echo "   • Run: headroom mcp status           (verify MCP tools registered)"
+echo "   • Run: remindctl today               (try out Reminders integration)"
+echo "   • OpenCode auto-discovers .opencode/plugins/*.ts — no manual config needed"
+echo "   • Edit .opencode/opencode.json        (MCP servers, agents, npm plugins)"
+echo ""

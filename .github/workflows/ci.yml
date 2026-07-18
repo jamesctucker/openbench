@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-python:
+    name: Python — test + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            scripts/workspace/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r scripts/workspace/requirements.txt
+
+      - name: Lint with ruff
+        run: ruff check tests/
+
+      - name: Test with pytest
+        run: python -m pytest tests/ --tb=short -q
+
+  test-node:
+    name: Node — vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Test with vitest
+        run: npx vitest run --config tests/vitest.config.ts
+
+  validate-workspace:
+    name: Validate workspace structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            scripts/workspace/requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r scripts/workspace/requirements.txt
+
+      - name: Validate workspace
+        run: python scripts/workspace/validate.py
+
+      - name: Health check
+        run: python scripts/workspace/health-check.py --quick

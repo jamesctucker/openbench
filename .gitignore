@@ -1,0 +1,64 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+\#*\#
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+.pytest_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+
+# Obsidian
+**/.obsidian/
+**/.trash/
+
+# Logs
+*.log
+.logs/
+
+# Derived indexes
+memory/.index/
+
+# Misc
+*.tmp
+*.temp
+.cache/
+
+# Work — external repos (independently versioned)
+# Track the README, ignore everything else
+work/*
+!work/README.md
+
+# Plugins — some are independently versioned
+.opencode/plugins/harness/
+
+# Temp files
+temp/*

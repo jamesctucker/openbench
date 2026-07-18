@@ -1,0 +1,75 @@
+#!/bin/sh
+# Pre-push hook — run tests and lint before pushing.
+# Skipped if SKIP_HOOKS=1 is set.
+# Deferred env: EVAL_DEPS=1 installs Python dev deps if missing.
+
+if [ -n "$SKIP_HOOKS" ]; then
+  echo "[husky] SKIP_HOOKS set — skipping pre-push checks"
+  exit 0
+fi
+
+echo "[husky] Running pre-push checks..."
+FAILED=0
+
+# ── Python dev deps ──────────────────────────────────────────
+if [ -n "$EVAL_DEPS" ]; then
+  if ! python -m pytest --version >/dev/null 2>&1; then
+    echo "[husky] Installing Python dev dependencies..."
+    pip install -r requirements.txt -q
+  fi
+fi
+
+# ── Python tests ─────────────────────────────────────────────
+echo ""
+echo "[husky] pytest..."
+if python -m pytest --version >/dev/null 2>&1; then
+  python -m pytest tests/ --tb=short -q
+  if [ $? -ne 0 ]; then
+    echo "[husky] ❌ pytest failed"
+    FAILED=1
+  fi
+else
+  echo "[husky] ⚠ pytest not installed — run: pip install -r requirements.txt"
+fi
+
+# ── Python lint ──────────────────────────────────────────────
+echo ""
+echo "[husky] ruff check (tests/)..."
+if command -v ruff >/dev/null 2>&1; then
+  ruff check tests/
+  if [ $? -ne 0 ]; then
+    echo "[husky] ❌ ruff check failed"
+    FAILED=1
+  fi
+elif python -m ruff --version >/dev/null 2>&1; then
+  python -m ruff check tests/
+  if [ $? -ne 0 ]; then
+    echo "[husky] ❌ ruff check failed"
+    FAILED=1
+  fi
+else
+  echo "[husky] ⚠ ruff not installed — skipping lint"
+fi
+
+# ── TypeScript tests (vitest via bun) ────────────────────────
+echo ""
+echo "[husky] bun run test (vitest)..."
+if command -v bun >/dev/null 2>&1; then
+  bun run test 2>&1
+  if [ $? -ne 0 ]; then
+    echo "[husky] ❌ tests failed"
+    FAILED=1
+  fi
+else
+  echo "[husky] ⚠ bun not installed — skipping TypeScript tests"
+fi
+
+echo ""
+if [ $FAILED -ne 0 ]; then
+  echo "[husky] ❌ Pre-push checks failed"
+  echo "[husky] To skip: SKIP_HOOKS=1 git push"
+  exit 1
+fi
+
+echo "[husky] ✅ All pre-push checks passed"
+exit 0

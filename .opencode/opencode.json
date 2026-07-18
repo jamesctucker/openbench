@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "granola": {
+      "type": "remote",
+      "url": "https://mcp.granola.ai/mcp",
+      "enabled": true
+    },
+    "sunsama": {
+      "type": "remote",
+      "url": "https://api.sunsama.com/mcp",
+      "enabled": true
+    },
+    "readwise": {
+      "type": "remote",
+      "url": "https://mcp2.readwise.io/mcp"
+    },
+    "goodreads": {
+      "type": "local",
+      "command": ["node", "scripts/mcp-servers/goodreads-mcp.mjs"],
+      "environment": {
+        "GOODREADS_USER_ID": "${GOODREADS_USER_ID}"
+      }
+    },
+    "semble": {
+      "type": "local",
+      "command": ["uvx", "--from", "semble[mcp]", "semble"]
+    },
+    "headroom": {
+      "type": "local",
+      "command": ["headroom", "mcp", "serve"]
+    }
+  }
+}

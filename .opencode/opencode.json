@@ -15,13 +15,6 @@
       "type": "remote",
       "url": "https://mcp2.readwise.io/mcp"
     },
-    "goodreads": {
-      "type": "local",
-      "command": ["node", "scripts/mcp-servers/goodreads-mcp.mjs"],
-      "environment": {
-        "GOODREADS_USER_ID": "${GOODREADS_USER_ID}"
-      }
-    },
     "semble": {
       "type": "local",
       "command": ["uvx", "--from", "semble[mcp]", "semble"]

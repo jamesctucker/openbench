@@ -32,7 +32,6 @@ MCP servers configured in `.opencode/opencode.json`:
 - **Granola** — meeting notes and voice memo integration (remote MCP, no setup)
 - **Sunsama** — daily planning and task management (remote MCP, no setup). The `executive-function` skill pairs well with Sunsama.
 - **Readwise** — highlights and Reader access (remote MCP, no setup)
-- **Goodreads** — book shelves (local server, requires `GOODREADS_USER_ID` env var)
 - **Semble** — semantic code search across `work/` repos (local server, `uvx`)
 - **Headroom** — context compression (local server, save 60-95% on tool output tokens)
 
